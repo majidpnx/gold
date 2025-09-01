@@ -1,16 +1,16 @@
 import { MongoClient } from 'mongodb';
 
-const uri = process.env.MONGODB_URI || '';
+// Set fallback URI if not provided
+if (!process.env.MONGODB_URI) {
+  console.warn('MONGODB_URI not found in environment variables. Using fallback.');
+  process.env.MONGODB_URI = 'mongodb://localhost:27017/gold-trading';
+}
+
+const uri = process.env.MONGODB_URI;
 const options = {};
 
 let client;
 let clientPromise: Promise<MongoClient>;
-
-if (!process.env.MONGODB_URI) {
-  console.warn('MONGODB_URI not found in environment variables. Using fallback.');
-  // Use a fallback URI for build time
-  process.env.MONGODB_URI = 'mongodb://localhost:27017/gold-trading';
-}
 
 if (process.env.NODE_ENV === 'development') {
   if (!(global as any)._mongoClientPromise) {
