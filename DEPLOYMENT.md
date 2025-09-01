@@ -1,3 +1,4 @@
+
 # راهنمای Deployment در Vercel
 
 ## مشکل "Hello World" در Vercel
@@ -77,3 +78,25 @@ npm run start
 - **MongoDB**: حتماً از Atlas استفاده کنید
 - **Environment Variables**: همه متغیرها را در Vercel تنظیم کنید
 - **Build Time**: اولین build ممکن است 5-10 دقیقه طول بکشد
+- **vercel.json**: حذف شده - Next.js خودش تنظیمات را مدیریت می‌کند
+- **Runtime Error**: اگر runtime error گرفتید، vercel.json را حذف کنید
+
+## خطای "Function Runtimes must have a valid version"
+
+اگر این خطا را گرفتید:
+
+1. **vercel.json را حذف کنید** - Next.js خودش تنظیمات را مدیریت می‌کند
+2. **Redeploy کنید** - در Vercel Dashboard، "Redeploy" کلیک کنید
+3. **Environment Variables را بررسی کنید** - همه متغیرها را دوباره تنظیم کنید
+
+## فایل‌های تغییر یافته
+
+- `vercel.json` ❌ (حذف شده - Next.js خودش تنظیمات را مدیریت می‌کند)
+- `.vercelignore` ✅ (ساده‌سازی شده - فقط فایل‌های غیرضروری ignore می‌شوند)
+- `next.config.js` ✅ (بهینه‌سازی شده برای production)
+
+## نکته مهم درباره .vercelignore
+
+**مشکل اصلی:** اگر `.next` در `.vercelignore` باشد، Vercel نمی‌تواند build output را پیدا کند!
+
+**راه حل:** `.next` را از `.vercelignore` حذف کنید یا کاملاً فایل را ساده کنید.

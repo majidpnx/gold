@@ -15,7 +15,15 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 60,
   },
+  // Optimize for production
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: false,
+  // Enable static optimization
+  trailingSlash: false,
 }
 
 module.exports = nextConfig
