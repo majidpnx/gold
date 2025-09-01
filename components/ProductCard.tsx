@@ -118,7 +118,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       
     } catch (error) {
       console.error('Error in handleAddToCart:', error);
-      alert('خطا در افزودن به سبد خرید: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص';
+      alert('خطا در افزودن به سبد خرید: ' + errorMessage);
     } finally {
       setIsAddingToCart(false);
     }
