@@ -24,7 +24,7 @@ const productSchema = z.object({
   pricePerGram: z.number().positive('قیمت هر گرم باید مثبت باشد'),
   weightGrams: z.number().positive('وزن باید مثبت باشد'),
   tags: z.array(z.string()).optional(),
-  inStock: z.boolean().default(true),
+  inStock: z.boolean().optional().default(true),
   type: z.enum(['jewelry', 'bar'], { message: 'نوع محصول باید jewelry یا bar باشد' }),
 });
 
@@ -35,7 +35,7 @@ type ProductForm = {
   pricePerGram: number;
   weightGrams: number;
   tags?: string[];
-  inStock: boolean;
+  inStock?: boolean;
   type: 'jewelry' | 'bar';
 };
 
