@@ -13,9 +13,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Database connection error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص';
     return NextResponse.json({
       success: false,
-      message: 'خطا در اتصال به دیتابیس: ' + error.message,
+      message: 'خطا در اتصال به دیتابیس: ' + errorMessage,
     }, { status: 500 });
   }
 }
