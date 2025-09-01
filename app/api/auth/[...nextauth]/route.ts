@@ -25,7 +25,7 @@ const authOptions = {
       },
     }),
   ],
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt' as const },
   callbacks: {
     async session({ session, token }: { session: any; token: any }) {
       session.user.id = token.sub;
