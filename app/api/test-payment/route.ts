@@ -38,9 +38,10 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Test payment error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'خطای نامشخص';
     return NextResponse.json({
       success: false,
-      message: 'خطا در تست پرداخت: ' + error.message,
+      message: 'خطا در تست پرداخت: ' + errorMessage,
     }, { status: 500 });
   }
 }
