@@ -7,7 +7,9 @@ let client;
 let clientPromise: Promise<MongoClient>;
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your MongoDB URI to .env.local');
+  console.warn('MONGODB_URI not found in environment variables. Using fallback.');
+  // Use a fallback URI for build time
+  process.env.MONGODB_URI = 'mongodb://localhost:27017/gold-trading';
 }
 
 if (process.env.NODE_ENV === 'development') {
