@@ -46,7 +46,7 @@ export async function PATCH(
       return NextResponse.json({
         success: false,
         message: 'داده‌های ورودی نامعتبر است',
-        errors: error.errors,
+        errors: error.issues,
       }, { status: 400 });
     }
     
