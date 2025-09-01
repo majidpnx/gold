@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server';
 
+// Type definitions for gold types
+type GoldType = {
+  name: string;
+  unit: string;
+  source: string;
+} & (
+  | { weight: number; karatRatio?: never; premium?: never }
+  | { weight?: never; karatRatio: number; premium?: number }
+);
+
 // Cache for different gold types
 let typesCache = {
   data: null as any,
@@ -122,7 +132,7 @@ async function fetchGoldPriceUSD() {
 }
 
 // Iranian gold types configuration
-const goldTypes = {
+const goldTypes: Record<string, GoldType> = {
   'gram_18k': { 
     name: 'گرم طلای ۱۸ عیار', 
     unit: 'گرم',
@@ -217,19 +227,19 @@ async function fetchGoldTypes() {
     // Calculate 18k gold price (18k = 24k * 0.75)
     const final18kPrice = Math.round(final24kPrice * 0.75);
 
-    // Calculate prices for each type
+        // Calculate prices for each type
     Object.entries(goldTypes).forEach(([key, type]) => {
       let basePrice: number;
       
-      if (type.weight) {
+      if ('weight' in type && type.weight) {
         // For coins and bars, calculate based on weight
-        basePrice = Math.round(final24kPrice * type.weight);
-      } else if (type.karatRatio) {
+        basePrice = Math.round(final24kPrice * type.weight);       
+      } else if ('karatRatio' in type && type.karatRatio) {
         // For gold by karat, calculate based on ratio
         basePrice = Math.round(final24kPrice * type.karatRatio);
         
         // Apply jewelry premium if applicable
-        if (type.premium) {
+        if ('premium' in type && type.premium) {
           basePrice = Math.round(basePrice * type.premium);
         }
       } else {
@@ -279,11 +289,11 @@ async function fetchGoldTypes() {
     Object.entries(goldTypes).forEach(([key, type]) => {
       let basePrice: number;
       
-      if (type.weight) {
+      if ('weight' in type && type.weight) {
         basePrice = Math.round(fallback24kPrice * type.weight);
-      } else if (type.karatRatio) {
+      } else if ('karatRatio' in type && type.karatRatio) {
         basePrice = Math.round(fallback24kPrice * type.karatRatio);
-        if (type.premium) {
+        if ('premium' in type && type.premium) {
           basePrice = Math.round(basePrice * type.premium);
         }
       } else {
