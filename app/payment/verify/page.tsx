@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ interface VerificationResult {
   };
 }
 
-export default function PaymentVerificationPage() {
+function PaymentVerificationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
@@ -147,5 +147,27 @@ export default function PaymentVerificationPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function PaymentVerificationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-yellow-600 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              در حال بارگذاری...
+            </h2>
+            <p className="text-gray-600 text-center">
+              لطفاً صبر کنید...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <PaymentVerificationContent />
+    </Suspense>
   );
 }
