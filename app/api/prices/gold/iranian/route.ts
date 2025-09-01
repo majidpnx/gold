@@ -1,5 +1,17 @@
 import { NextResponse } from 'next/server';
 
+// Type definitions for Iranian gold items
+type GoldItem = {
+  name: string;
+  unit: string;
+  buySpread: number;
+  sellSpread: number;
+  source: string;
+} & (
+  | { weight: number; karatRatio?: never; premium?: never }
+  | { weight?: never; karatRatio: number; premium?: number }
+);
+
 // Cache for Iranian gold prices
 let iranianPriceCache = {
   data: null as any,
@@ -122,7 +134,7 @@ async function fetchGoldPriceUSD() {
 }
 
 // Iranian gold items configuration
-const iranianGoldItems = {
+const iranianGoldItems: Record<string, GoldItem> = {
   'gram_18k': {
     name: 'گرم طلای ۱۸ عیار',
     unit: 'گرم',
@@ -243,15 +255,15 @@ async function fetchIranianGoldPrices() {
     Object.entries(iranianGoldItems).forEach(([key, item]) => {
       let marketPrice: number;
       
-      if (item.weight) {
+      if ('weight' in item && item.weight) {
         // For coins and bars, calculate based on weight
         marketPrice = Math.round(final24kPrice * item.weight);
-      } else if (item.karatRatio) {
+      } else if ('karatRatio' in item && item.karatRatio) {
         // For gold by karat, calculate based on ratio
         marketPrice = Math.round(final24kPrice * item.karatRatio);
         
         // Apply jewelry premium if applicable
-        if (item.premium) {
+        if ('premium' in item && item.premium) {
           marketPrice = Math.round(marketPrice * item.premium);
         }
       } else {
@@ -307,11 +319,11 @@ async function fetchIranianGoldPrices() {
     Object.entries(iranianGoldItems).forEach(([key, item]) => {
       let marketPrice: number;
       
-      if (item.weight) {
+      if ('weight' in item && item.weight) {
         marketPrice = Math.round(fallback24kPrice * item.weight);
-      } else if (item.karatRatio) {
+      } else if ('karatRatio' in item && item.karatRatio) {
         marketPrice = Math.round(fallback24kPrice * item.karatRatio);
-        if (item.premium) {
+        if ('premium' in item && item.premium) {
           marketPrice = Math.round(marketPrice * item.premium);
         }
       } else {
