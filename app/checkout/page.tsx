@@ -36,6 +36,7 @@ function formatPrice(price: number): string {
 
 export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [user, setUser] = useState<any>(null);
   const [userInfo, setUserInfo] = useState<UserInfo>({
     firstName: '',
     lastName: '',
@@ -49,6 +50,28 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
+    // Check if user is logged in
+    const userData = localStorage.getItem('user');
+    if (!userData) {
+      window.location.href = '/auth/signin';
+      return;
+    }
+    
+    const userObj = JSON.parse(userData);
+    setUser(userObj);
+    
+    // Pre-fill user info
+    if (userObj.name) {
+      const nameParts = userObj.name.split(' ');
+      setUserInfo(prev => ({
+        ...prev,
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
+        phone: userObj.phone || '',
+        email: userObj.email || '',
+      }));
+    }
+    
     // Load cart items from localStorage
     try {
       const cartData = localStorage.getItem('cart');
@@ -91,12 +114,27 @@ export default function CheckoutPage() {
     try {
       // Create order data
       const orderData = {
-        items: cartItems,
+        _id: Date.now().toString(),
+        userId: user._id,
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+        })),
+        totalAmount: finalTotal,
+        status: 'pending',
+        paymentStatus: 'pending',
         userInfo,
-        totalPrice: finalTotal,
-        shippingCost,
-        status: 'pending'
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
+
+      // Save order to localStorage (in real app, save to database)
+      const existingOrders = JSON.parse(localStorage.getItem('userOrders') || '[]');
+      existingOrders.unshift(orderData);
+      localStorage.setItem('userOrders', JSON.stringify(existingOrders));
 
       // Send to ZarinPal payment API
       const response = await fetch('/api/payment/start', {
@@ -109,7 +147,8 @@ export default function CheckoutPage() {
           description: `سفارش طلا - ${userInfo.firstName} ${userInfo.lastName}`,
           callbackUrl: `${window.location.origin}/payment/verify`,
           userInfo,
-          cartItems
+          cartItems,
+          orderId: orderData._id
         }),
       });
 

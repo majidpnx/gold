@@ -1,219 +1,201 @@
-"use client";
-import { useQuery } from '@tanstack/react-query';
-import { fetcher } from '@/lib/fetcher';
-import { formatToman, formatDate } from '@/lib/format';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useCurrentUser } from '@/lib/auth';
-import { Wallet, Package, TrendingUp, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { 
+  User, 
+  Wallet, 
+  ShoppingBag, 
+  LogOut, 
+  Plus,
+  TrendingUp,
+  History
+} from 'lucide-react';
 import Link from 'next/link';
 
+interface User {
+  _id: string;
+  phone: string;
+  name: string;
+  email?: string;
+  userType: string;
+  walletBalance: number;
+  createdAt: string;
+}
+
 export default function DashboardPage() {
-  const { data: user, isLoading: userLoading } = useCurrentUser();
-  
-  const { data: walletData, isLoading: walletLoading } = useQuery({
-    queryKey: ['wallet'],
-    queryFn: () => fetcher('/api/wallet'),
-  });
-  
-  const { data: ordersData, isLoading: ordersLoading } = useQuery({
-    queryKey: ['orders'],
-    queryFn: () => fetcher('/api/orders'),
-  });
-  
-  const { data: tradesData, isLoading: tradesLoading } = useQuery({
-    queryKey: ['trades'],
-    queryFn: () => fetcher('/api/trades'),
-  });
-  
-  if (userLoading) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    } else {
+      router.push('/auth/signin');
+    }
+    setIsLoading(false);
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('cart');
+    router.push('/');
+  };
+
+  if (isLoading) {
     return (
-      <main className="container py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">در حال بارگذاری...</p>
         </div>
-      </main>
+      </div>
     );
   }
-  
-  const balance = walletData?.balance || 0;
-  const orders = ordersData || [];
-  const trades = tradesData || [];
-  
+
+  if (!user) {
+    return null;
+  }
+
   return (
-    <main className="container py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-yellow-700 mb-2">داشبورد</h1>
-        <p className="text-gray-600">خوش آمدید {user?.name || user?.phone}</p>
-      </div>
-      
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              خوش آمدید، {user.name || 'کاربر'}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {user.phone}
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleLogout}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            خروج
+          </Button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">موجودی کیف پول</CardTitle>
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {user.walletBalance.toLocaleString('fa-IR')} تومان
+              </div>
+              <p className="text-xs text-muted-foreground">
+                موجودی فعلی شما
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">سفارشات فعال</CardTitle>
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">
+                سفارشات در انتظار
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">تاریخ عضویت</CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {new Date(user.createdAt).toLocaleDateString('fa-IR')}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                عضو از
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Link href="/gallery">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <TrendingUp className="h-8 w-8 text-yellow-600 mb-2" />
+                <h3 className="font-semibold">خرید طلا</h3>
+                <p className="text-sm text-gray-600 text-center">
+                  مشاهده محصولات و خرید
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/wallet">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <Wallet className="h-8 w-8 text-green-600 mb-2" />
+                <h3 className="font-semibold">کیف پول</h3>
+                <p className="text-sm text-gray-600 text-center">
+                  مدیریت موجودی
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/orders">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <History className="h-8 w-8 text-blue-600 mb-2" />
+                <h3 className="font-semibold">سفارشات</h3>
+                <p className="text-sm text-gray-600 text-center">
+                  تاریخچه سفارشات
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/profile">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="flex flex-col items-center justify-center p-6">
+                <User className="h-8 w-8 text-purple-600 mb-2" />
+                <h3 className="font-semibold">پروفایل</h3>
+                <p className="text-sm text-gray-600 text-center">
+                  ویرایش اطلاعات
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Recent Activity */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">موجودی کیف پول</CardTitle>
-            <Wallet className="h-4 w-4 text-yellow-600" />
+          <CardHeader>
+            <CardTitle>فعالیت‌های اخیر</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-700">
-              {formatToman(balance)}
+            <div className="text-center py-8 text-gray-500">
+              <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>هنوز فعالیتی ثبت نشده است</p>
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">تعداد سفارشات</CardTitle>
-            <Package className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {orders.length}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">تعداد معاملات</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {trades.length}
-            </div>
-          </CardContent>
-        </Card>
       </div>
-      
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Link href="/wallet">
-          <Button className="w-full bg-yellow-500 hover:bg-yellow-600">
-            <Wallet className="ml-2 h-4 w-4" />
-            کیف پول
-          </Button>
-        </Link>
-        <Link href="/trading">
-          <Button className="w-full bg-green-500 hover:bg-green-600">
-            <TrendingUp className="ml-2 h-4 w-4" />
-            معامله آبشده
-          </Button>
-        </Link>
-        <Link href="/orders">
-          <Button className="w-full bg-blue-500 hover:bg-blue-600">
-            <Package className="ml-2 h-4 w-4" />
-            سفارشات
-          </Button>
-        </Link>
-        <Link href="/gallery">
-          <Button className="w-full bg-purple-500 hover:bg-purple-600">
-            <User className="ml-2 h-4 w-4" />
-            گالری
-          </Button>
-        </Link>
-      </div>
-      
-      {/* Recent Orders */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>آخرین سفارشات</CardTitle>
-          <CardDescription>سفارشات اخیر شما</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {ordersLoading ? (
-            <div className="animate-pulse space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          ) : orders.length > 0 ? (
-            <div className="space-y-2">
-              {orders.slice(0, 5).map((order: any) => (
-                <div key={order._id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                  <div>
-                    <p className="font-medium">سفارش #{order._id.slice(-6)}</p>
-                    <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-yellow-700">{formatToman(order.totalPrice)}</p>
-                    <p className={`text-sm px-2 py-1 rounded ${
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      order.status === 'paid' ? 'bg-blue-100 text-blue-800' :
-                      order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
-                      order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {order.status === 'pending' ? 'در انتظار' :
-                       order.status === 'paid' ? 'پرداخت شده' :
-                       order.status === 'shipped' ? 'ارسال شده' :
-                       order.status === 'delivered' ? 'تحویل شده' :
-                       'لغو شده'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">هنوز سفارشی ثبت نکرده‌اید</p>
-          )}
-          {orders.length > 5 && (
-            <div className="text-center mt-4">
-              <Link href="/orders">
-                <Button variant="outline">مشاهده همه سفارشات</Button>
-              </Link>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Recent Trades */}
-      <Card>
-        <CardHeader>
-          <CardTitle>آخرین معاملات</CardTitle>
-          <CardDescription>معاملات اخیر آبشده</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {tradesLoading ? (
-            <div className="animate-pulse space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          ) : trades.length > 0 ? (
-            <div className="space-y-2">
-              {trades.slice(0, 5).map((trade: any) => (
-                <div key={trade._id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                  <div>
-                    <p className={`font-medium ${trade.type === 'buy' ? 'text-green-600' : 'text-red-600'}`}>
-                      {trade.type === 'buy' ? 'خرید' : 'فروش'} {trade.grams} گرم
-                    </p>
-                    <p className="text-sm text-gray-500">{formatDate(trade.createdAt)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-yellow-700">{formatToman(trade.total)}</p>
-                    <p className="text-sm text-gray-500">{formatToman(trade.unitPrice)}/گرم</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">هنوز معامله‌ای انجام نداده‌اید</p>
-          )}
-          {trades.length > 5 && (
-            <div className="text-center mt-4">
-              <Link href="/trading">
-                <Button variant="outline">مشاهده همه معاملات</Button>
-              </Link>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </main>
+    </div>
   );
 }

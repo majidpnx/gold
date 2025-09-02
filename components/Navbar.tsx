@@ -2,11 +2,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/store/cart';
-import { useCurrentUser } from '@/lib/auth';
 import { formatToman } from '@/lib/format';
-import { ShoppingCart, User2, LogIn, Menu, X, Package, TrendingUp, Home } from 'lucide-react';
+import { ShoppingCart, User2, LogIn, Menu, X, Package, TrendingUp, Home, User, LogOut } from 'lucide-react';
 import CartBadge from './CartBadge';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PriceTicker from './PriceTicker';
 
 const navLinks = [
@@ -17,9 +16,17 @@ const navLinks = [
 
 export default function Navbar() {
   const { items } = useCart();
-  const { data: user } = useCurrentUser();
+  const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -75,14 +82,27 @@ export default function Navbar() {
           </Link>
           
           {user ? (
-            <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-yellow-50 transition-colors">
-              <User2 className="w-5 h-5 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">
-                {user.name || user.phone || 'کاربر'}
-              </span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-yellow-50 transition-colors">
+                <User className="w-5 h-5 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">
+                  {user.name || user.phone || 'کاربر'}
+                </span>
+              </Link>
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('user');
+                  localStorage.removeItem('cart');
+                  window.location.href = '/';
+                }}
+                className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+                title="خروج"
+              >
+                <LogOut className="w-4 h-4 text-red-600" />
+              </button>
+            </div>
           ) : (
-            <Link href="/auth/login" className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors">
+            <Link href="/auth/signin" className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors">
               <LogIn className="w-4 h-4" />
               ورود
             </Link>
@@ -147,19 +167,33 @@ export default function Navbar() {
               </Link>
 
               {user ? (
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <User2 className="w-5 h-5 text-gray-600" />
-                  <span className="text-gray-700">
-                    {user.name || user.phone || 'کاربر'}
-                  </span>
-                </Link>
+                <div className="space-y-2">
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User className="w-5 h-5 text-gray-600" />
+                    <span className="text-gray-700">
+                      {user.name || user.phone || 'کاربر'}
+                    </span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('user');
+                      localStorage.removeItem('cart');
+                      setIsMobileMenuOpen(false);
+                      window.location.href = '/';
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-colors w-full text-right"
+                  >
+                    <LogOut className="w-5 h-5 text-red-600" />
+                    <span className="text-red-600">خروج</span>
+                  </button>
+                </div>
               ) : (
                 <Link
-                  href="/auth/login"
+                  href="/auth/signin"
                   className="flex items-center gap-3 px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

@@ -1,142 +1,223 @@
-"use client";
-import { useQuery } from '@tanstack/react-query';
-import { fetcher } from '@/lib/fetcher';
-import { formatToman, formatDate } from '@/lib/format';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Eye, Calendar, DollarSign } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { 
+  ArrowLeft,
+  Package,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye
+} from 'lucide-react';
 import Link from 'next/link';
 
-export default function OrdersPage() {
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ['orders'],
-    queryFn: () => fetcher('/api/orders'),
-  });
-  
-  if (isLoading) {
-    return (
-      <main className="container py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </main>
-    );
-  }
-  
-  return (
-    <main className="container py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-yellow-700 mb-2">سفارشات من</h1>
-        <p className="text-gray-600">تاریخچه و وضعیت سفارشات شما</p>
-      </div>
-      
-      {orders && orders.length > 0 ? (
-        <div className="space-y-4">
-          {orders.map((order: any) => (
-            <OrderCard key={order._id} order={order} />
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="text-center py-16">
-            <Package className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">هنوز سفارشی ثبت نکرده‌اید</h2>
-            <p className="text-gray-600 mb-6">برای مشاهده محصولات و ثبت سفارش به گالری مراجعه کنید</p>
-            <Link href="/gallery">
-              <Button className="bg-yellow-500 hover:bg-yellow-600">
-                مشاهده گالری
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      )}
-    </main>
-  );
+interface Order {
+  _id: string;
+  userId: string;
+  items: Array<{
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
+  }>;
+  totalAmount: number;
+  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed';
+  createdAt: string;
+  updatedAt: string;
 }
 
-function OrderCard({ order }: { order: any }) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'paid':
-        return 'bg-blue-100 text-blue-800';
-      case 'shipped':
-        return 'bg-purple-100 text-purple-800';
-      case 'delivered':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+      fetchOrders();
+    } else {
+      router.push('/auth/signin');
+    }
+  }, [router]);
+
+  const fetchOrders = async () => {
+    try {
+      setIsLoading(true);
+      // In a real app, you would fetch from API
+      // For demo, we'll use localStorage
+      const savedOrders = localStorage.getItem('userOrders');
+      if (savedOrders) {
+        setOrders(JSON.parse(savedOrders));
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  const getStatusText = (status: string) => {
+
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'در انتظار';
-      case 'paid':
-        return 'پرداخت شده';
-      case 'shipped':
-        return 'ارسال شده';
-      case 'delivered':
-        return 'تحویل شده';
+        return <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" />در انتظار</Badge>;
+      case 'processing':
+        return <Badge variant="default" className="flex items-center gap-1"><Package className="h-3 w-3" />در حال پردازش</Badge>;
+      case 'completed':
+        return <Badge variant="default" className="bg-green-600 flex items-center gap-1"><CheckCircle className="h-3 w-3" />تکمیل شده</Badge>;
       case 'cancelled':
-        return 'لغو شده';
+        return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" />لغو شده</Badge>;
       default:
-        return status;
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
-  
+
+  const getPaymentStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="text-yellow-600">در انتظار پرداخت</Badge>;
+      case 'paid':
+        return <Badge variant="default" className="bg-green-600">پرداخت شده</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">پرداخت ناموفق</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">در حال بارگذاری سفارشات...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              <Package className="h-5 w-5 text-yellow-600" />
-              <h3 className="font-semibold text-lg">
-                سفارش #{order._id.slice(-6)}
-              </h3>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-                {getStatusText(order.status)}
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>{formatDate(order.createdAt)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                <span>{order.items?.length || 0} محصول</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                <span className="font-medium text-yellow-700">
-                  {formatToman(order.totalPrice)}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            <Link href={`/orders/${order._id}`}>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                مشاهده جزئیات
-              </Button>
-            </Link>
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/dashboard">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 ml-2" />
+              بازگشت
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">سفارشات من</h1>
+            <p className="text-gray-600 mt-2">
+              تاریخچه تمام سفارشات شما
+            </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {orders.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Package className="h-16 w-16 text-gray-400 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                هنوز سفارشی ثبت نکرده‌اید
+              </h3>
+              <p className="text-gray-600 text-center mb-6">
+                برای شروع خرید، به فروشگاه ما سر بزنید
+              </p>
+              <Link href="/gallery">
+                <Button>
+                  شروع خرید
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {orders.map((order) => (
+              <Card key={order._id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">
+                        سفارش #{order._id.slice(-8)}
+                      </CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {new Date(order.createdAt).toLocaleDateString('fa-IR')}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {getStatusBadge(order.status)}
+                      {getPaymentStatusBadge(order.paymentStatus)}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Order Items */}
+                    <div>
+                      <h4 className="font-medium mb-2">محصولات:</h4>
+                      <div className="space-y-2">
+                        {order.items.map((item, index) => (
+                          <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                            <div className="flex items-center gap-3">
+                              {item.image && (
+                                <img 
+                                  src={item.image} 
+                                  alt={item.name}
+                                  className="w-12 h-12 object-cover rounded"
+                                />
+                              )}
+                              <div>
+                                <p className="font-medium">{item.name}</p>
+                                <p className="text-sm text-gray-600">
+                                  تعداد: {item.quantity}
+                                </p>
+                              </div>
+                            </div>
+                            <p className="font-medium">
+                              {item.price.toLocaleString('fa-IR')} تومان
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Order Total */}
+                    <div className="flex justify-between items-center pt-4 border-t">
+                      <span className="text-lg font-semibold">مجموع:</span>
+                      <span className="text-lg font-bold text-yellow-600">
+                        {order.totalAmount.toLocaleString('fa-IR')} تومان
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-4">
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4 ml-2" />
+                        جزئیات
+                      </Button>
+                      {order.status === 'pending' && order.paymentStatus === 'pending' && (
+                        <Button size="sm">
+                          پرداخت
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
