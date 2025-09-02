@@ -11,19 +11,44 @@ interface PriceTickerProps {
   compact?: boolean;
 }
 
-interface GoldPriceData {
-  unitPrice: number;
+interface BrsApiData {
+  gold_18k: {
+    price: number;
+    change_percent: number;
+    name: string;
+  } | null;
+  gold_24k: {
+    price: number;
+    change_percent: number;
+    name: string;
+  } | null;
+  coin_emami: {
+    price: number;
+    change_percent: number;
+    name: string;
+  } | null;
+  coin_bahar: {
+    price: number;
+    change_percent: number;
+    name: string;
+  } | null;
+  usd: {
+    price: number;
+    change_percent: number;
+    name: string;
+  } | null;
+  eur: {
+    price: number;
+    change_percent: number;
+    name: string;
+  } | null;
+  iranianGoldPrice: number;
+  lastUpdated: string;
   source: string;
-  updatedAt: string;
-  marketInfo: {
-    iranianPremium?: number;
-    fluctuation?: number;
-    note?: string;
-  };
 }
 
-async function fetchGoldPrice(): Promise<GoldPriceData> {
-  const response = await fetch('/api/prices/gold');
+async function fetchGoldPrice(): Promise<BrsApiData> {
+  const response = await fetch('/api/prices/brsapi');
   const data = await response.json();
   return data.data;
 }
@@ -44,12 +69,10 @@ function formatTimeAgo(dateString: string): string {
 
 function getSourceBadge(source: string) {
   switch (source) {
-    case 'priceto_day_calculation':
-      return { text: 'priceto.day', variant: 'default' as const };
-    case 'fallback_calculation':
-      return { text: 'محاسبه پیش‌فرض', variant: 'secondary' as const };
-    case 'emergency_fallback':
-      return { text: 'پیش‌فرض اضطراری', variant: 'destructive' as const };
+    case 'BrsApi.ir':
+      return { text: 'BrsApi.ir', variant: 'default' as const };
+    case 'fallback':
+      return { text: 'پیش‌فرض', variant: 'secondary' as const };
     default:
       return { text: 'نامشخص', variant: 'outline' as const };
   }
@@ -88,13 +111,13 @@ export default function PriceTicker({ compact = false }: PriceTickerProps) {
             <div className="flex items-center gap-1">
               <TrendingUp className="h-4 w-4 text-yellow-600" />
               <span className="font-semibold text-yellow-700">
-                {formatPrice(data.unitPrice)}
+                {formatPrice(data.gold_18k?.price || data.iranianGoldPrice || 0)}
               </span>
               <span className="text-gray-600 text-xs">تومان</span>
             </div>
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <Clock className="h-3 w-3" />
-              <span>{formatTimeAgo(data.updatedAt)}</span>
+              <span>{formatTimeAgo(data.lastUpdated)}</span>
             </div>
           </>
         ) : null}
@@ -142,7 +165,7 @@ export default function PriceTicker({ compact = false }: PriceTickerProps) {
           <>
             <div className="text-center">
               <div className="text-4xl md:text-5xl font-bold text-yellow-700 mb-2">
-                {formatPrice(data.unitPrice)}
+                {formatPrice(data.gold_18k?.price || data.iranianGoldPrice || 0)}
               </div>
               <div className="text-lg text-gray-600 mb-4">تومان برای هر گرم (۱۸ عیار)</div>
             </div>
@@ -155,28 +178,22 @@ export default function PriceTicker({ compact = false }: PriceTickerProps) {
                 </Badge>
               </div>
               
-              {data.marketInfo?.iranianPremium && (
-                <div className="text-xs text-gray-500 mb-1">
-                  پریمیوم بازار ایران: {((data.marketInfo.iranianPremium - 1) * 100).toFixed(1)}%
+              {data.gold_18k?.change_percent && (
+                <div className={`text-xs mb-1 ${data.gold_18k.change_percent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  تغییر: {data.gold_18k.change_percent.toFixed(2)}%
                 </div>
               )}
               
-              {data.marketInfo?.fluctuation && (
+              {data.usd && (
                 <div className="text-xs text-gray-500 mb-1">
-                  نوسان: {data.marketInfo.fluctuation.toFixed(2)}%
+                  دلار: {formatPrice(data.usd.price)} ریال
                 </div>
               )}
               
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <Clock className="h-3 w-3" />
-                <span>آخرین بروزرسانی: {formatTimeAgo(data.updatedAt)}</span>
+                <span>آخرین بروزرسانی: {formatTimeAgo(data.lastUpdated)}</span>
               </div>
-              
-              {data.marketInfo?.note && (
-                <div className="text-xs text-blue-600 mt-2 p-2 bg-blue-50 rounded">
-                  {data.marketInfo.note}
-                </div>
-              )}
               
               <div className="text-xs text-gray-400 mt-2 text-center">
                 بروزرسانی خودکار هر ۵ ثانیه

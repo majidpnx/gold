@@ -1,193 +1,103 @@
 import { NextResponse } from 'next/server';
 
+// BrsApi.ir API configuration
+const BRS_API_BASE_URL = 'https://brsapi.ir/Api/Market';
+const BRS_API_KEY = 'FreeSV0E1LSgB9RDjuf0QorSLViX8pPG';
+
 // Cache for gold price
 let priceCache = {
   data: null as any,
   lastFetch: 0,
-  cacheDuration: 5000, // 5 seconds
+  cacheDuration: 30000, // 30 seconds
 };
 
-// Fetch real-time USD to Toman exchange rate from priceto.day
-async function fetchUSDToTomanRate() {
+// Fetch prices from BrsApi.ir
+async function fetchBrsApiPrices() {
   try {
-    // Use priceto.day API for USD to IRR rate
-    const response = await fetch('https://priceto.day/api/v1/currency/USD/IRR', {
-      headers: { 'User-Agent': 'GoldTradingApp/1.0' },
-      next: { revalidate: 300 } // 5 minutes cache
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data.price && data.price > 0) {
-        console.log('USD to IRR rate from priceto.day:', data.price);
-        return data.price / 10; // Convert IRR to Toman (divide by 10)
-      }
-    }
-    
-    // Fallback to exchangerate-api.com
-    const fallbackResponse = await fetch('https://api.exchangerate-api.com/v4/latest/USD', {
-      headers: { 'User-Agent': 'GoldTradingApp/1.0' },
-      next: { revalidate: 300 }
-    });
-    
-    if (fallbackResponse.ok) {
-      const fallbackData = await fallbackResponse.json();
-      if (fallbackData.rates && fallbackData.rates.IRR) {
-        console.log('USD to IRR rate from fallback:', fallbackData.rates.IRR);
-        return fallbackData.rates.IRR / 10;
-      }
-    }
-
-    // Ultimate fallback to current approximate rate
-    console.log('Using fallback USD to Toman rate: 1048300');
-    return 1048300; // Current approximate USD to Toman rate
-  } catch (error) {
-    console.error('Error fetching USD to Toman rate:', error);
-    return 1048300; // Fallback rate
-  }
-}
-
-// Fetch real-time gold price using priceto.day
-async function fetchGoldPriceUSD() {
-  try {
-    // Primary source: priceto.day API for gold price
-    const response = await fetch('https://priceto.day/api/v1/gold/XAU/USD', {
-      headers: { 'User-Agent': 'GoldTradingApp/1.0' },
-      next: { revalidate: 300 } // 5 minutes cache
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data.price && data.price > 0) {
-        console.log('Gold price from priceto.day:', data.price);
-        return data.price;
-      }
-    }
-    
-    // Fallback to gold-api.com
-    const fallbackResponse = await fetch('https://gold-api.com/api/XAU/USD', {
-      headers: { 'User-Agent': 'GoldTradingApp/1.0' },
-      next: { revalidate: 300 }
-    });
-    
-    if (fallbackResponse.ok) {
-      const fallbackData = await fallbackResponse.json();
-      if (fallbackData.price && fallbackData.price > 0) {
-        console.log('Gold price from fallback:', fallbackData.price);
-        return fallbackData.price;
-      }
-    }
-    
-    // Additional fallback sources
-    const additionalFallbacks = [
-      {
-        url: 'https://api.metals.live/v1/spot/gold',
-        parser: (data: any) => data[0]?.price
+    const response = await fetch(`${BRS_API_BASE_URL}/Gold_Currency.php?key=${BRS_API_KEY}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'GoldTradingApp/1.0',
       },
-      {
-        url: 'https://api.coingecko.com/api/v3/simple/price?ids=gold&vs_currencies=usd',
-        parser: (data: any) => data.gold?.usd
-      }
-    ];
+      next: { revalidate: 60 }, // Cache for 1 minute
+    });
 
-    for (const source of additionalFallbacks) {
-      try {
-        const fallbackResponse = await fetch(source.url, { 
-          headers: { 'User-Agent': 'GoldTradingApp/1.0' },
-          next: { revalidate: 300 }
-        });
-        
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json();
-          const price = source.parser(fallbackData);
-          
-          if (price && price > 0) {
-            console.log(`Gold price from additional fallback: ${price}`);
-            return price;
-          }
-        }
-      } catch (error) {
-        console.log(`Failed to fetch from additional fallback:`, (error as Error).message);
-        continue;
-      }
+    if (!response.ok) {
+      throw new Error(`BrsApi.ir responded with status: ${response.status}`);
     }
 
-    // Ultimate fallback to current approximate gold price
-    console.log('Using fallback gold price: 2400 USD/oz');
-    return 2400; // Current approximate gold price per troy ounce
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error('Error fetching gold price USD:', error);
-    return 2400; // Fallback price
+    console.error('Error fetching from BrsApi.ir:', error);
+    return null;
   }
 }
 
-async function fetchGoldPrice() {
-  const now = new Date();
-
-  try {
-    // Fetch real-time data from priceto.day and fallbacks
-    const [goldPriceUSD, usdToToman] = await Promise.all([
-      fetchGoldPriceUSD(),
-      fetchUSDToTomanRate()
-    ]);
-
-    // Calculate gold price per gram in USD
-    const goldPricePerGramUSD = goldPriceUSD / 31.1035;
-    
-    // Calculate base 24k gold price in Toman
-    const base24kPriceToman = Math.round(goldPricePerGramUSD * usdToToman);
-    
-    // Add Iranian market premium (typically 5-15% higher than global price)
-    const iranianPremium = 1.08; // 8% premium for Iranian market
-    const final24kPrice = Math.round(base24kPriceToman * iranianPremium);
-    
-    // Calculate 18k gold price (18k = 24k * 0.75)
-    const final18kPrice = Math.round(final24kPrice * 0.75);
-    
-    // Add small market fluctuation (±0.3%)
-    const fluctuation = (Math.random() - 0.5) * 0.006;
-    const finalPrice = Math.round(final18kPrice * (1 + fluctuation));
-    
-    // Clamp price to realistic bounds for Iranian market
-    const minPrice = 80000000; // 80M Tomans minimum
-    const maxPrice = 120000000; // 120M Tomans maximum
-    const clampedPrice = Math.max(minPrice, Math.min(maxPrice, finalPrice));
-
-    return {
-      unitPrice: clampedPrice,
-      usdPrice: goldPriceUSD,
-      exchangeRate: usdToToman,
-      source: 'priceto_day_calculation',
-      updatedAt: now.toISOString(),
-      marketInfo: {
-        globalPriceUSD: goldPriceUSD,
-        goldPricePerGramUSD: goldPricePerGramUSD,
-        base24kPriceToman: base24kPriceToman,
-        final24kPrice: final24kPrice,
-        final18kPrice: final18kPrice,
-        iranianPremium: iranianPremium,
-        fluctuation: fluctuation * 100,
-        note: 'قیمت بر اساس داده‌های priceto.day محاسبه شده'
-      }
-    };
-
-  } catch (error) {
-    console.error('Error calculating gold price:', error);
-    
-    // Fallback with estimated prices
-    const fallbackPrice = 89407000; // Current approximate 18k gold price
-    
-    return {
-      unitPrice: fallbackPrice,
-      usdPrice: 2400,
-      exchangeRate: 1048300,
-      source: 'fallback_calculation',
-      updatedAt: now.toISOString(),
-      marketInfo: {
-        note: 'استفاده از قیمت پیش‌فرض به دلیل خطا در محاسبه'
-      }
-    };
+// Process BrsApi data and return gold price
+function processGoldPrice(brsData: any[]) {
+  if (!brsData || !Array.isArray(brsData)) {
+    return null;
   }
+
+  let gold18k = null;
+  let gold24k = null;
+  let usd = null;
+
+  // Find relevant data
+  brsData.forEach((item: any) => {
+    switch (item.symbol) {
+      case 'IR_GOLD_18K':
+        gold18k = item;
+        break;
+      case 'IR_GOLD_24K':
+        gold24k = item;
+        break;
+      case 'USD':
+        usd = item;
+        break;
+    }
+  });
+
+  // Use 18k gold price if available, otherwise calculate from 24k
+  let unitPrice = 0;
+  let source = 'BrsApi.ir';
+
+  if (gold18k && gold18k.price > 0) {
+    unitPrice = gold18k.price;
+  } else if (gold24k && gold24k.price > 0) {
+    // Convert 24k to 18k (18k = 24k * 0.75)
+    unitPrice = Math.round(gold24k.price * 0.75);
+  } else {
+    // Fallback calculation
+    unitPrice = 89407000; // Approximate 18k gold price
+    source = 'fallback';
+  }
+
+  return {
+    unitPrice,
+    source,
+    updatedAt: new Date().toISOString(),
+    marketInfo: {
+      gold18k: gold18k ? {
+        price: gold18k.price,
+        change_percent: gold18k.change_percent,
+        name: gold18k.name,
+      } : null,
+      gold24k: gold24k ? {
+        price: gold24k.price,
+        change_percent: gold24k.change_percent,
+        name: gold24k.name,
+      } : null,
+      usd: usd ? {
+        price: usd.price,
+        change_percent: usd.change_percent,
+        name: usd.name,
+      } : null,
+      note: source === 'BrsApi.ir' ? 'قیمت بر اساس داده‌های BrsApi.ir' : 'استفاده از قیمت پیش‌فرض'
+    }
+  };
 }
 
 export async function GET() {
@@ -203,8 +113,27 @@ export async function GET() {
       });
     }
 
-    // Calculate gold price
-    const priceData = await fetchGoldPrice();
+    // Fetch fresh data from BrsApi.ir
+    const brsData = await fetchBrsApiPrices();
+    
+    let priceData;
+    
+    if (brsData) {
+      // Process the data
+      priceData = processGoldPrice(brsData);
+    }
+    
+    // If processing failed or no data, use fallback
+    if (!priceData) {
+      priceData = {
+        unitPrice: 89407000, // Fallback price
+        source: 'emergency_fallback',
+        updatedAt: new Date().toISOString(),
+        marketInfo: {
+          note: 'استفاده از قیمت پیش‌فرض به دلیل خطا در دریافت داده'
+        }
+      };
+    }
     
     // Update cache
     priceCache.data = priceData;
@@ -229,9 +158,21 @@ export async function GET() {
       });
     }
 
+    // Ultimate fallback
+    const fallbackData = {
+      unitPrice: 89407000,
+      source: 'emergency_fallback',
+      updatedAt: new Date().toISOString(),
+      marketInfo: {
+        note: 'استفاده از قیمت پیش‌فرض به دلیل خطا در سیستم'
+      }
+    };
+
     return NextResponse.json({
-      success: false,
-      message: 'خطا در دریافت قیمت طلا',
-    }, { status: 500 });
+      success: true,
+      data: fallbackData,
+      cached: false,
+      fallback: true,
+    });
   }
 }

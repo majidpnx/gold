@@ -1,4 +1,5 @@
 import PriceTicker from '@/components/PriceTicker';
+import PriceDashboard from '@/components/PriceDashboard';
 import GoldTypesTicker from '@/components/GoldTypesTicker';
 import HeroSlider from '@/components/HeroSlider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +20,11 @@ export default function HomePage() {
           {/* Main Gold Price Display */}
           <div className="max-w-4xl mx-auto mb-16">
             <PriceTicker />
+          </div>
+
+          {/* Price Dashboard */}
+          <div className="max-w-7xl mx-auto mb-16">
+            <PriceDashboard />
           </div>
 
           {/* Features */}
